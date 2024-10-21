@@ -1,0 +1,71 @@
+import sqlite3
+
+# Define the User class
+class User:
+    def __init__(self, user_id, user_name, user_email, user_password):
+        self.user_id = user_id
+        self.user_name = user_name
+        self.user_email = user_email
+        self.user_password = user_password
+
+# Database handler class
+class DatabaseHandler:
+    def __init__(self, db_name="users.db"):
+        # Connect to SQLite database (it will be created if it doesn't exist)
+        self.conn = sqlite3.connect(db_name)
+        self.cursor = self.conn.cursor()
+        # Create the users table if it doesn't exist
+        self.create_table()
+
+    def create_table(self):
+        # Create a table to store users
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS users (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                name TEXT NOT NULL,
+                                email TEXT UNIQUE NOT NULL,
+                                password TEXT NOT NULL)''')
+        self.conn.commit()
+
+    def create_user(self, user_name, user_email, user_password):
+        # Insert a new user into the database
+        self.cursor.execute('''INSERT INTO users (name, email, password) 
+                               VALUES (?, ?, ?)''', (user_name, user_email, user_password))
+        self.conn.commit()
+        return self.get_user_by_email(user_email)
+
+    def update_user(self, user_id, user_name=None, user_email=None, user_password=None):
+        # Update user information based on the provided values
+        if user_name:
+            self.cursor.execute('''UPDATE users SET name = ? WHERE id = ?''', (user_name, user_id))
+        if user_email:
+            self.cursor.execute('''UPDATE users SET email = ? WHERE id = ?''', (user_email, user_id))
+        if user_password:
+            self.cursor.execute('''UPDATE users SET password = ? WHERE id = ?''', (user_password, user_id))
+        self.conn.commit()
+        return self.get_user_by_id(user_id)
+
+    def delete_user(self, user_id):
+        # Delete a user from the database
+        self.cursor.execute('''DELETE FROM users WHERE id = ?''', (user_id,))
+        self.conn.commit()
+        return f"User with id {user_id} deleted."
+
+    def get_user_by_id(self, user_id):
+        # Retrieve a user from the database by ID
+        self.cursor.execute('''SELECT * FROM users WHERE id = ?''', (user_id,))
+        user = self.cursor.fetchone()
+        if user:
+            return User(user_id=user[0], user_name=user[1], user_email=user[2], user_password=user[3])
+        return None
+
+    def get_user_by_email(self, user_email):
+        # Retrieve a user from the database by email
+        self.cursor.execute('''SELECT * FROM users WHERE email = ?''', (user_email,))
+        user = self.cursor.fetchone()
+        if user:
+            return User(user_id=user[0], user_name=user[1], user_email=user[2], user_password=user[3])
+        return None
+
+    def close(self):
+        # Close the database connection
+        self.conn.close()
